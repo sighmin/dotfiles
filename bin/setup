@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+# Symlink the dotfiles in this repo into $HOME, install the Padbury Clock
+# screensaver, and (optionally) run macOS system tweaks.
+#
+# Safe to re-run. Existing real files at the target path are backed up with a
+# .backup.<timestamp> suffix; existing symlinks are replaced.
+
+set -euo pipefail
+
+DOTFILES="$(cd "$(dirname "$0")/.." && pwd)"
+
+. "$DOTFILES/bin/helpers"
+
+link() {
+  local src="$DOTFILES/$1"
+  local dst="$HOME/$2"
+
+  if [ ! -e "$src" ]; then
+    perror "missing source: $src"
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$dst")"
+
+  if [ -L "$dst" ]; then
+    rm "$dst"
+  elif [ -e "$dst" ]; then
+    mv "$dst" "$dst.backup.$(date +%s)"
+    pinfo "backed up existing $dst"
+  fi
+
+  ln -s "$src" "$dst"
+  echo "  $dst -> $src"
+}
+
+pinfo "[dotfiles]: Symlinking files into \$HOME"
+link bashrc                .bashrc
+link zshrc                 .zshrc
+link gitconfig             .gitconfig
+link gitignore             .gitignore
+link tmux.conf             .tmux.conf
+link vimrc                 .vimrc
+link vimrc.bundles         .vimrc.bundles
+link vimrc.bundles.local   .vimrc.bundles.local
+link fzf.bash              .fzf.bash
+link fzf.zsh               .fzf.zsh
+link tmux/themes           .tmux/themes
+
+pinfo "[dotfiles]: Installing Padbury Clock screensaver"
+saver_src="$DOTFILES/macos/Padbury Clock.saver"
+saver_dst="$HOME/Library/Screen Savers/Padbury Clock.saver"
+mkdir -p "$HOME/Library/Screen Savers"
+if [ -e "$saver_dst" ] || [ -L "$saver_dst" ]; then
+  echo "  already installed: $saver_dst"
+else
+  cp -R "$saver_src" "$saver_dst"
+  echo "  installed: $saver_dst"
+fi
+
+psuccess "Done."
+pinfo "Next steps:"
+echo "  - open a new shell so .zshrc is picked up"
+echo "  - inside tmux: prefix + I to install TPM plugins"
+echo "  - inside vim:  :PlugInstall"
+echo "  - optional: $DOTFILES/bin/mac-config (macOS system defaults)"

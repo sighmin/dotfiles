@@ -1,0 +1,45 @@
+[user]
+	name = Simon van Dyk
+	email = simon.vandyk@gmail.com
+[core]
+	editor = vim
+	excludesfile = ~/.gitignore
+[color]
+	ui = true
+[alias]
+	alias = config --get-regexp ^alias\\.
+	a = add
+	b = branch
+	l = log
+	f = fetch
+	r = remote
+	c = commit
+	co = checkout
+	cp = cherry-pick
+	am = commit --amend
+	p = push
+	pf = push --force-with-lease
+	pff = push --force
+	pl = pull
+	d = diff
+	rb = rebase
+	sta = stash
+	cane = commit --amend --no-edit
+	ignored = !git ls-files -v | grep "^S"
+	ignore = update-index --skip-worktree
+	unignore = update-index --no-skip-worktree
+	aa = add -A .
+	ci = commit
+[credential]
+	helper = osxkeychain
+[gpg]
+	program = /usr/local/bin/gpg
+[diff "enc"]
+	textconv = rails encrypted:show
+	cachetextconv = false
+[rerere]
+	enabled = true
+[init]
+	defaultBranch = main
+[push]
+	autoSetupRemote = true

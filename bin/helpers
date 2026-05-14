@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+
+BLUE='\033[1;34m'
+GREEN='\033[1;32m'
+RED='\033[1;91m'
+RESET='\033[0m'
+
+pecho() {
+  # shellcheck disable=SC2028
+  echo "\n$1$RESET"
+}
+
+pinfo() {
+  pecho "$BLUE$*"
+}
+
+psuccess() {
+  pecho "$GREEN$1"
+}
+
+perror() {
+  pecho "$RED$1"
+}
+
+not_installed() {
+  [ ! -x "$(command -v "$@")" ]
+}

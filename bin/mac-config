@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+
+set -e # exit if something fails
+
+. helpers
+
+pinfo "[mac]: Decreasing key repeat delay"
+defaults write -g InitialKeyRepeat -int 10
+defaults write -g KeyRepeat -int 1
+defaults write -g ApplePressAndHoldEnabled -bool false
+
+pinfo "[mac]: Hiding desktop icons"
+defaults write com.apple.finder CreateDesktop false
+killall Finder
+
+psuccess "Success!"
+pinfo "[post-install]: You must reboot for the changes to take effect."

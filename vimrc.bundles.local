@@ -1,0 +1,59 @@
+" Multi-cursor
+Plug 'terryma/vim-multiple-cursors'
+" Send a buffer to tmux
+Plug 'jgdavey/tslime.vim'
+" Local vim config
+Plug 'embear/vim-localvimrc'
+" Great collection of colour schemes for vim
+Plug 'flazz/vim-colorschemes'
+" One colorscheme
+Plug 'rakr/vim-one'
+" Fuzzy search with fzf: this manages fzf installation as well
+Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+Plug 'junegunn/fzf.vim'
+" Highlight hex color codes
+Plug 'chrisbra/Colorizer'
+" Easy multi line commenting (try <leader>ci )
+Plug 'ddollar/nerdcommenter'
+" Awesome directory listings (try <leader>n )
+Plug 'scrooloose/nerdtree'
+" Browse ctags in a bar
+" Plug 'majutsushi/tagbar'
+" Auto ctags update
+Plug 'xolox/vim-easytags'
+" Dependency of xolox's vim plugins
+Plug 'xolox/vim-misc'
+" User defined text-objects
+Plug 'kana/vim-textobj-user'
+" Handy ruby block selectors (try var and vir for 'around' and 'inside')
+Plug 'nelstrom/vim-textobj-rubyblock', { 'for': 'ruby' }
+" Awesome status line
+Plug 'vim-airline/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
+" Markdown previews
+Plug 'shime/vim-livedown'
+" Distraction free writing
+Plug 'junegunn/goyo.vim'
+Plug 'junegunn/limelight.vim'
+" Unobtrusiver highlighting of trailing whitespaces (:Trim)
+Plug 'csexton/trailertrash.vim'
+" Autoclosing of quotes, parentheses, brackets etc
+Plug 'Raimondi/delimitMate'
+" Begins tab completion with a single <tab> instead of c-x c-o
+Plug 'ervandew/supertab'
+" Align things
+Plug 'junegunn/vim-easy-align'
+" Fluent syntax highlighter
+Plug 'projectfluent/fluent.vim'
+
+" TypeScript better syntax highlighting
+Plug 'leafgarland/typescript-vim'
+" Code completion plugin using language server model
+Plug 'neoclide/coc.nvim' , { 'branch' : 'release' }
+
+" Syntax highlight markdown and embedded 'fenced' code blocks syntax highlighting
+"Plug 'tpop/vim-markdown'
+
+" GitHub Copilot
+Plug 'github/copilot.vim'
+
