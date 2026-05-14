@@ -25,9 +25,10 @@ git clone git@github.com:sighmin/dotfiles.git ~/Developer/svd/dotfiles
 
 ### Editor
 
-- `vimrc` — base vim config.
-- `vimrc.bundles` — vim-plug plugin list.
-- `vimrc.bundles.local` — extra plugins (multicursor, copilot, coc, etc).
+- `nvim/` — LazyVim-based Neovim config (init.lua, lua/config, lua/plugins,
+  lazy-lock.json). Symlinked to `~/.config/nvim`.
+- `vimrc` — barebones vim config kept around for quick edits in plain vim. No
+  plugins; just settings and keymaps.
 
 ### Multiplexer
 

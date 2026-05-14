@@ -41,11 +41,10 @@ link gitconfig             .gitconfig
 link gitignore             .gitignore
 link tmux.conf             .tmux.conf
 link vimrc                 .vimrc
-link vimrc.bundles         .vimrc.bundles
-link vimrc.bundles.local   .vimrc.bundles.local
 link fzf.bash              .fzf.bash
 link fzf.zsh               .fzf.zsh
 link tmux/themes           .tmux/themes
+link nvim                  .config/nvim
 
 pinfo "[dotfiles]: Installing Padbury Clock screensaver"
 saver_src="$DOTFILES/macos/Padbury Clock.saver"
@@ -62,5 +61,5 @@ psuccess "Done."
 pinfo "Next steps:"
 echo "  - open a new shell so .zshrc is picked up"
 echo "  - inside tmux: prefix + I to install TPM plugins"
-echo "  - inside vim:  :PlugInstall"
+echo "  - inside nvim: lazy.nvim will sync plugins on first launch"
 echo "  - optional: $DOTFILES/bin/mac-config (macOS system defaults)"
