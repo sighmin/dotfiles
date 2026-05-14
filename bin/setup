@@ -35,7 +35,6 @@ link() {
 }
 
 pinfo "[dotfiles]: Symlinking files into \$HOME"
-link bashrc                .bashrc
 link zshrc                 .zshrc
 link gitconfig             .gitconfig
 link gitignore             .gitignore

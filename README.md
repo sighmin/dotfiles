@@ -20,7 +20,6 @@ git clone git@github.com:sighmin/dotfiles.git ~/Developer/svd/dotfiles
 - `zshrc` — zsh: history, prompt (pure), syntax highlighting, autosuggestions,
   fzf, nvm, `g`/`gloc`/`gpoc`/`gpr` git helpers, `ai`/`ai2` natural-language
   shell command helper. Sources `~/.zsh_secrets` (gitignored) if present.
-- `bashrc` — sources `~/.fzf.bash`.
 - `fzf.zsh`, `fzf.bash` — fzf shell integration.
 
 ### Editor

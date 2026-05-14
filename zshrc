@@ -56,45 +56,6 @@ function gpr {
 [ -f "$HOME/.zsh_secrets" ] && source "$HOME/.zsh_secrets"
 
 ##################################################
-# AI: natural language → shell command
-##################################################
-# Pipes the args to `llm` with a strict system prompt and stages the model's
-# reply on the next prompt line via `print -z`, so the suggested command can
-# be reviewed/edited before you hit enter.
-#
-# Setup (one-time):
-#   brew install llm                # or: pipx install llm
-#   llm install llm-gemini
-#   llm keys set gemini             # paste your Google AI Studio key
-#
-# Usage:
-#   $ ai1 find all pngs over 1MB modified this week
-#   $ find . -type f -name '*.png' -size +1M -mtime -7█
-
-_ai_system_prompt='You convert a natural-language request into a single shell command for zsh on macOS (BSD coreutils, not GNU). Output ONLY the command, no prose, no explanation, no markdown code fences, no leading $.'
-
-# ai1: minimal — fetch the command and stage it on the next prompt line
-function ai {
-  (( $# )) || { print -u2 "usage: ai1 <description>"; return 2 }
-  local cmd
-  cmd=$(llm -m gemini-flash-latest -s "$_ai_system_prompt" -- "$*") || return
-  cmd=$(print -r -- "$cmd" | sed '/^[[:space:]]*```/d')   # strip stray fences if model added them
-  cmd=${cmd%$'\n'}                                        # trim trailing newline
-  print -z -- "$cmd"
-}
-
-# ai2: same as ai1, but also echoes the generated command to scrollback for context
-function ai2 {
-  (( $# )) || { print -u2 "usage: ai2 <description>"; return 2 }
-  local cmd
-  cmd=$(llm -m gemini-flash-latest -s "$_ai_system_prompt" -- "$*") || return
-  cmd=$(print -r -- "$cmd" | sed '/^[[:space:]]*```/d')
-  cmd=${cmd%$'\n'}
-  print -P "%F{cyan}→ %f$cmd"
-  print -z -- "$cmd"
-}
-
-##################################################
 # Aliases
 ##################################################
 alias c=clear
