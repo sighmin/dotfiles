@@ -57,6 +57,12 @@ git clone git@github.com:sighmin/dotfiles.git ~/Developer/svd/dotfiles
 - `Padbury Clock.saver` — screensaver bundle. `setup` copies it into
   `~/Library/Screen Savers/`.
 
+### Homebrew
+
+- `Brewfile` — packages, casks, and taps. Refresh with
+  `brew bundle dump --file=Brewfile --force`. Install on a new machine with
+  `brew bundle --file=Brewfile`.
+
 ## Secrets
 
 API keys and similar live in `~/.zsh_secrets`, which is sourced by `zshrc` and
