@@ -26,33 +26,47 @@ local function has_multiple_buffers()
   return #vim.fn.getbufinfo({ buflisted = 1 }) > 1
 end
 
+-- True when the current window is the *only* window in a non-primary tab
+-- page. In that case quitting should close the tab page itself, not just
+-- the buffer — otherwise tab pages pile up empty in the tabline.
+local function lone_window_in_extra_tab()
+  return vim.fn.tabpagenr("$") > 1 and #vim.api.nvim_tabpage_list_wins(0) == 1
+end
+
 -- :q and :q! — bang is forwarded so :q! force-closes (discards modifications).
 vim.api.nvim_create_user_command("Q", function(opts)
-  if has_multiple_buffers() then
+  if lone_window_in_extra_tab() then
+    vim.cmd(opts.bang and "tabclose!" or "tabclose")
+  elseif has_multiple_buffers() then
     Snacks.bufdelete({ force = opts.bang })
   else
     vim.cmd(opts.bang and "quit!" or "quit")
   end
-end, { bang = true, desc = "Close buffer if multiple, else quit" })
+end, { bang = true, desc = "Close tab/buffer if multiple, else quit" })
 
 -- :wq and :wq! — writes the current buffer first, then closes it (or quits).
 vim.api.nvim_create_user_command("Wq", function(opts)
-  if has_multiple_buffers() then
+  if lone_window_in_extra_tab() then
+    vim.cmd(opts.bang and "write!" or "write")
+    vim.cmd("tabclose")
+  elseif has_multiple_buffers() then
     vim.cmd(opts.bang and "write!" or "write")
     Snacks.bufdelete()
   else
     vim.cmd(opts.bang and "wq!" or "wq")
   end
-end, { bang = true, desc = "Write + close buffer if multiple, else :wq" })
+end, { bang = true, desc = "Write + close tab/buffer if multiple, else :wq" })
 
 -- :quit and :quit! — longhand for :q / :q!.
 vim.api.nvim_create_user_command("Quit", function(opts)
-  if has_multiple_buffers() then
+  if lone_window_in_extra_tab() then
+    vim.cmd(opts.bang and "tabclose!" or "tabclose")
+  elseif has_multiple_buffers() then
     Snacks.bufdelete({ force = opts.bang })
   else
     vim.cmd(opts.bang and "quit!" or "quit")
   end
-end, { bang = true, desc = "Close buffer if multiple, else :quit" })
+end, { bang = true, desc = "Close tab/buffer if multiple, else :quit" })
 
 -- Command-line abbreviations. Each guard checks the cmdline matches the
 -- bare command exactly, so :Qq / :qall / :wqa / :quitall etc. stay native.
@@ -112,3 +126,7 @@ vim.keymap.set("n", "<leader>W", function() Snacks.zen.zoom() end, { desc = "Tog
 -- key is `n` — `tx`, `tc`, etc. still work normally. If `t` to land before
 -- the next `n` matters to you, switch this to `<leader>tn` instead.
 vim.keymap.set("n", "tn", "<cmd>tabnew<cr>", { desc = "New tab page" })
+
+-- Ctrl-P: fuzzy find files (classic ctrlp.vim muscle memory). Uses snacks
+-- picker, same as LazyVim's <leader>ff / <leader><space>.
+vim.keymap.set("n", "<C-p>", function() Snacks.picker.files() end, { desc = "Find files" })
