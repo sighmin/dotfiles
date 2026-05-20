@@ -100,6 +100,24 @@ fi
 source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 
 ##################################################
+# Vim keybindings
+##################################################
+# Modal editing on the zsh command line. Esc enters normal mode (vicmd),
+# i/a return to insert mode (viins). KEYTIMEOUT=1 above keeps Esc snappy
+# (10ms), which is why that was set even before vi mode was enabled.
+bindkey -v
+
+# Restore a handful of emacs-style bindings inside insert mode — these are
+# muscle memory worth keeping even in a vim setup, and not having them feels
+# hostile. Use the modal vicmd keys (h/l/w/b/f/t/etc.) for everything else.
+bindkey '^A' beginning-of-line       # Ctrl-A → jump to start of line
+bindkey '^E' end-of-line              # Ctrl-E → jump to end of line
+bindkey '^P' up-line-or-search        # Ctrl-P → previous history match
+bindkey '^N' down-line-or-search      # Ctrl-N → next history match
+bindkey '^?' backward-delete-char     # backspace: always delete
+bindkey '^H' backward-delete-char     # some terminals send ^H for backspace
+
+##################################################
 # Version managers
 ##################################################
 export NVM_DIR="$HOME/.nvm"
@@ -107,3 +125,14 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# bun completions
+[ -s "/Users/svd/.bun/_bun" ] && source "/Users/svd/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# asdf
+export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
+#. $(brew --prefix asdf)/libexec/asdf.sh
