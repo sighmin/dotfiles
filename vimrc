@@ -80,9 +80,13 @@ if executable('ag')
   nnoremap \ :Ag<SPACE>
 endif
 
-" Make it obvious where 80 characters is
-set textwidth=80
-set colorcolumn=+1
+" Make it obvious where 80 characters is (visual marker only, no hard wrap)
+set colorcolumn=80
+
+" Soft-wrap long lines at word boundaries, with continuation lines indented
+set wrap
+set linebreak
+set breakindent
 
 " Numbers
 set number

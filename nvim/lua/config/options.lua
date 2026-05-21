@@ -4,3 +4,8 @@
 
 -- LazyVim enables `relativenumber` by default; prefer absolute line numbers only.
 vim.opt.relativenumber = false
+
+-- Soft-wrap long lines at word boundaries, with continuation lines indented.
+vim.opt.wrap = true
+vim.opt.linebreak = true
+vim.opt.breakindent = true
