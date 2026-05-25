@@ -64,6 +64,7 @@ unalias g 2>/dev/null
 g() { if [ $# -eq 0 ]; then git status; else git "$@"; fi }
 alias :q=exit
 alias cl='claude --dangerously-skip-permissions'
+alias mux=tmuxinator
 
 ##################################################
 # Custom prompt: sindresorhus/pure
