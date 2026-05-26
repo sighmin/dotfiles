@@ -62,6 +62,30 @@ YELLOW=$'\033[33m'
 RED=$'\033[31m'
 RESET=$'\033[0m'
 
+# status.claude.com cache. The statusline NEVER hits the network itself —
+# it reads the most recent value written by status-refresh.sh and, if that
+# value is older than 60s, kicks off a detached refresh for next time.
+# Worst case the colour is one render stale; the prompt stays instant.
+status_cache="${CLAUDE_STATUS_CACHE:-$HOME/.claude/cache/claude-status}"
+claude_status=""
+[ -r "$status_cache" ] && claude_status=$(cat "$status_cache" 2>/dev/null)
+
+# `find -mmin -1` matches only if the file was modified in the last minute,
+# which is portable between macOS and Linux (unlike `stat -f` vs `stat -c`).
+if [ ! -f "$status_cache" ] || [ -z "$(find "$status_cache" -mmin -1 2>/dev/null)" ]; then
+  # Detach via subshell so we don't hold the prompt waiting on curl.
+  ( "$(dirname "$0")/status-refresh.sh" >/dev/null 2>&1 & )
+fi
+
+# Pick a style for the model token based on the upstream service status.
+# operational / unknown / empty → unchanged (current dim look).
+model_style="$DIM"
+case "$claude_status" in
+  degraded_performance)             model_style="$YELLOW" ;;
+  partial_outage|under_maintenance) model_style="$BOLD$YELLOW" ;;
+  major_outage)                     model_style="$BOLD$RED" ;;
+esac
+
 # cx: context-remaining %. Lower is worse → ramps to red.
 fmt_cx() {
   local pct_str="$1"
@@ -106,7 +130,7 @@ elif [ -z "$worktree" ] && [ -n "$short_branch" ]; then
   tokens+=("${DIM}${short_branch}${RESET}")
 fi
 
-[ -n "$model" ] && tokens+=("${DIM}${model}${RESET}")
+[ -n "$model" ] && tokens+=("${model_style}${model}${RESET}")
 
 cx_tok=$(fmt_cx "$ctx_remaining")
 [ -n "$cx_tok" ] && tokens+=("$cx_tok")
