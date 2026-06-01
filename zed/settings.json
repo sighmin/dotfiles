@@ -1,0 +1,87 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+  "tabs": {
+    "git_status": false,
+    "file_icons": false,
+  },
+  "title_bar": {
+    "show_menus": false,
+  },
+  "diff_view_style": "unified",
+  "agent": {
+    "inline_assistant_model": {
+      "provider": "google",
+      "model": "gemini-3.5-flash",
+      "enable_thinking": false,
+    },
+    "default_model": {
+      "provider": "google",
+      "model": "gemini-3.5-flash",
+      "enable_thinking": true,
+    },
+    "favorite_models": [],
+    "model_parameters": [],
+  },
+  "cli_default_open_behavior": "existing_window",
+  "buffer_line_height": "comfortable",
+  "agent_ui_font_size": 15.0,
+  "proxy": "",
+  "icon_theme": {
+    "mode": "system",
+    "light": "Zed (Default)",
+    "dark": "Zed (Default)",
+  },
+  "agent_servers": {
+    "codex-acp": {
+      "type": "registry",
+    },
+    "claude-acp": {
+      "favorite_config_option_values": {
+        "effort": ["max"],
+      },
+      "type": "registry",
+    },
+  },
+  "session": {
+    "trust_all_worktrees": true,
+  },
+  "vim_mode": true,
+  "ui_font_size": 14.0,
+  "buffer_font_size": 13.0,
+  // Match Ghostty's built-in default (JetBrains Mono + bundled Nerd Font icons)
+  "terminal": {
+    "font_family": "JetBrainsMono NFM",
+    "font_size": 12.0,
+  },
+  "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "One Dark",
+  },
+  // Don't reformat TS/TSX on save (e.g. Prettier/eslint rewriting the buffer)
+  "languages": {
+    "TypeScript": {
+      "format_on_save": "off",
+    },
+    "TSX": {
+      "format_on_save": "off",
+    },
+  },
+  "file_scan_exclusions": [
+    // "**/.svn",
+    // "**/.hg",
+    // "**/.jj",
+    // "**/CVS",
+    // "**/.DS_Store",
+    // "**/Thumbs.db",
+    // "**/.classpath",
+    // "**/.settings"
+  ],
+}

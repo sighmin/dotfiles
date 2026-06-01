@@ -44,6 +44,8 @@ link fzf.bash              .fzf.bash
 link fzf.zsh               .fzf.zsh
 link tmux/themes           .tmux/themes
 link nvim                  .config/nvim
+link zed/settings.json     .config/zed/settings.json
+link zed/keymap.json       .config/zed/keymap.json
 
 pinfo "[dotfiles]: Installing Padbury Clock screensaver"
 saver_src="$DOTFILES/macos/Padbury Clock.saver"

@@ -1,0 +1,38 @@
+// Zed keymap
+//
+// For information on binding keys, see the Zed
+// documentation: https://zed.dev/docs/key-bindings
+//
+// To see the default key bindings run `zed: open default keymap`
+// from the command palette.
+[
+  {
+    "context": "Editor && vim_mode != insert",
+    "bindings": {
+      "t n": "workspace::NewFile",
+    },
+  },
+  {
+    "context": "Editor && vim_mode == insert",
+    "bindings": {},
+  },
+  {
+    "context": "Workspace || Editor",
+    "bindings": {
+      // Navigate between panes
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-j": "workspace::ActivatePaneDown",
+    },
+  },
+  {
+    "bindings": {
+      // Resize panes
+      "ctrl-a shift-k": "vim::ResizePaneUp",
+      "ctrl-a shift-j": "vim::ResizePaneDown",
+      "ctrl-a shift-h": "vim::ResizePaneLeft",
+      "ctrl-a shift-l": "vim::ResizePaneRight",
+    },
+  },
+]

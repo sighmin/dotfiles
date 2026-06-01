@@ -28,6 +28,9 @@ git clone git@github.com:sighmin/dotfiles.git ~/Developer/svd/dotfiles
   lazy-lock.json). Symlinked to `~/.config/nvim`.
 - `vimrc` — barebones vim config kept around for quick edits in plain vim. No
   plugins; just settings and keymaps.
+- `zed/settings.json`, `zed/keymap.json` — Zed config (vim mode, theme, agent
+  servers, keymaps). Symlinked individually into `~/.config/zed/` so Zed's
+  local state (e.g. `prompts/`) stays out of the repo.
 
 ### Multiplexer
 
