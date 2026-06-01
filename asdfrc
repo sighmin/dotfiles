@@ -1,0 +1,7 @@
+# asdf configuration. See https://asdf-vm.com/manage/configuration.html
+
+# Honour legacy version files (.nvmrc, .node-version, .ruby-version, ...) in
+# addition to .tool-versions, so per-project Node pins written for nvm keep
+# working under asdf. Paired with ASDF_NODEJS_LEGACY_FILE_DYNAMIC_STRATEGY
+# in ~/.zshrc, which maps bare-major pins to the highest installed version.
+legacy_version_file = yes

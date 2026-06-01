@@ -121,9 +121,14 @@ bindkey '^H' backward-delete-char     # some terminals send ^H for backspace
 ##################################################
 # Version managers
 ##################################################
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+# nvm removed in favour of asdf. asdf reads each project's .nvmrc/.node-version
+# because ~/.asdfrc sets `legacy_version_file = yes`. The strategy below maps a
+# bare-major pin (e.g. "24") to the highest *installed* version rather than the
+# latest *available* one (which may not be installed locally and would error).
+export ASDF_NODEJS_LEGACY_FILE_DYNAMIC_STRATEGY=latest_installed
+# pnpm/yarn come from corepack (enabled per node version). Let it fetch the
+# version pinned in each project's package.json "packageManager" without prompting.
+export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
