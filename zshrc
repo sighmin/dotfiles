@@ -132,6 +132,21 @@ export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
+##################################################
+# Completion init (cached)
+##################################################
+# Initialise the completion system once, with a day-cached dump. `-C` trusts the
+# existing ~/.zcompdump and skips the slow security audit + rebuild when it's
+# fresh (< 24h), saving ~200ms at startup. Doing this BEFORE sourcing ~/.bun/_bun
+# matters: bun's bundled `if ! command -v compinit; then ... compinit; fi` then
+# sees compinit already defined and skips its own slow, uncached call.
+autoload -Uz compinit
+if [[ -n ~/.zcompdump(#qN.mh-24) ]]; then
+  compinit -C        # dump exists and is fresh → fast path, skip the audit
+else
+  compinit           # missing or stale (>24h) → full init, (re)writes the dump
+fi
+
 # bun completions
 [ -s "/Users/svd/.bun/_bun" ] && source "/Users/svd/.bun/_bun"
 
