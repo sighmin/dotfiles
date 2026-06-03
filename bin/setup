@@ -42,6 +42,8 @@ link tmux.conf             .tmux.conf
 link vimrc                 .vimrc
 link fzf.bash              .fzf.bash
 link fzf.zsh               .fzf.zsh
+link asdfrc                .asdfrc
+link tool-versions         .tool-versions
 link tmux/themes           .tmux/themes
 link nvim                  .config/nvim
 link zed/settings.json     .config/zed/settings.json
