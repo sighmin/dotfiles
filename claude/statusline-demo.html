@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Claude Code statusline that never blocks your prompt</title>
+<meta name="description" content="A fast, status-aware Claude Code statusline. Live demo of every component and state, plus a one-file install your agent can run.">
+<script>
+  /* Resolve the theme before first paint so there's no flash of the wrong mode. */
+  (function () {
+    try {
+      var p = localStorage.getItem("statusline-demo-theme") || "system";
+      var dark = p === "system" ? matchMedia("(prefers-color-scheme: dark)").matches : p === "dark";
+      document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+  })();
+</script>
+<style>
+  /* ── Palette: Atom One Dark (svd's terminal theme) + Claude clay accent ── */
+  :root {
+    --bg:        #0c0e13;
+    --bg-soft:   #11141b;
+    --term-bg:   #21252b;
+    --term-bar:  #2c313a;
+    --panel:     #161a22;
+    --border:    #272d39;
+    --fg:        #abb2bf;   /* ANSI default foreground            */
+    --dim:       #6b7587;   /* ANSI dim (2m) — muted, still legible */
+    --bright:    #e8ebf1;   /* ANSI bold (1m) — brightened         */
+    --yellow:    #e5c07b;   /* ANSI 33                              */
+    --red:       #e06c75;   /* ANSI 31                              */
+    --green:     #98c379;
+    --blue:      #61afef;
+    --accent:    #d97757;   /* Claude clay                          */
+    --accent-2:  #c15f3c;
+    --ink:       #d7dbe4;
+    --ink-soft:  #9aa3b2;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Monaco, "Cascadia Code", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  /* ── Light theme: overrides the same vars, so token rules below are unchanged.
+        Atom One Light palette + a darker clay accent for contrast on white.  ── */
+  :root[data-theme="light"] {
+    --bg:        #f4f5f7;
+    --bg-soft:   #ffffff;
+    --term-bg:   #f6f7f9;
+    --term-bar:  #e7e9ee;
+    --panel:     #ffffff;
+    --border:    #e3e6eb;
+    --fg:        #4b5059;
+    --dim:       #9aa0ab;
+    --bright:    #1b1d22;
+    --yellow:    #b07400;
+    --red:       #d83a3a;
+    --green:     #4d9a48;
+    --blue:      #3b73e0;
+    --accent:    #c15f3c;
+    --accent-2:  #a84e2f;
+    --ink:       #23262d;
+    --ink-soft:  #5b616c;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Theme switcher ── */
+  .theme-switch { position: fixed; top: 14px; right: 14px; z-index: 60; display: flex; gap: 2px; padding: 4px; background: var(--panel); border: 1px solid var(--border); border-radius: 999px; box-shadow: 0 8px 24px -12px rgba(0,0,0,0.45); }
+  .theme-switch button { border: none; background: transparent; color: var(--ink-soft); font-family: var(--sans); font-size: 0.8rem; padding: 6px 13px; border-radius: 999px; cursor: pointer; line-height: 1; }
+  .theme-switch button:hover { color: var(--ink); }
+  .theme-switch button[aria-pressed="true"] { background: var(--accent); color: #1a0f0a; font-weight: 700; }
+  @media (max-width: 560px) { .theme-switch { top: 10px; right: 10px; } .theme-switch button { padding: 6px 10px; font-size: 0.74rem; } }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 72px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: 1.9rem; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h3 { font-size: 1.05rem; margin: 0 0 6px; }
+  .lede { color: var(--ink-soft); font-size: 1.05rem; max-width: 60ch; margin: 0 0 36px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.72rem; font-weight: 700; color: var(--accent); margin: 0 0 14px; }
+
+  /* ── Terminal rendering of the statusline ── */
+  .term {
+    background: var(--term-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px -28px rgba(0,0,0,0.8);
+    font-family: var(--mono);
+  }
+  .term-bar { background: var(--term-bar); padding: 10px 14px; display: flex; gap: 8px; align-items: center; }
+  .term-bar i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .term-bar .r { background: #e06c75; } .term-bar .y { background: #e5c07b; } .term-bar .g { background: #98c379; }
+  .term-bar span { color: var(--dim); font-size: 0.78rem; margin-left: 8px; }
+  .term-body { padding: 18px 18px 16px; font-size: 0.92rem; }
+  .term-body .muted { color: var(--dim); }
+  .term-body .glyph { color: var(--green); }
+  .term-line { white-space: pre-wrap; word-break: break-word; }
+  .statusline {
+    margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border);
+    font-family: var(--mono); font-size: 0.92rem; white-space: pre-wrap; word-break: break-word;
+  }
+
+  /* ── ANSI → CSS token styles (the single visual contract) ── */
+  .tok { color: var(--fg); }
+  .tok.dim    { color: var(--dim); }
+  .tok.bold   { color: var(--bright); font-weight: 700; }
+  .tok.yellow { color: var(--yellow); }
+  .tok.red    { color: var(--red); }
+  .tok.bold.yellow { color: var(--yellow); font-weight: 700; }
+  .tok.bold.red    { color: var(--red);    font-weight: 700; }
+  .tok.sep    { color: var(--dim); }
+
+  /* ── Hero ── */
+  .hero { padding: 96px 0 80px; border-top: none; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: -40% 0 auto -10%; height: 460px;
+    background: radial-gradient(60% 100% at 30% 0%, rgba(217,119,87,0.18), transparent 70%);
+    pointer-events: none;
+  }
+  .hero h1 { font-size: clamp(2.1rem, 5vw, 3.2rem); line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 18px; max-width: 18ch; }
+  .hero h1 .accent { color: var(--accent); }
+  .hero p { font-size: 1.15rem; color: var(--ink-soft); max-width: 56ch; margin: 0 0 28px; }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 44px; }
+  .btn { display: inline-block; padding: 11px 20px; border-radius: 8px; font-weight: 600; font-size: 0.95rem; border: 1px solid transparent; cursor: pointer; }
+  .btn.primary { background: var(--accent); color: #1a0f0a; }
+  .btn.primary:hover { background: #e8865f; text-decoration: none; }
+  .btn.ghost { border-color: var(--border); color: var(--ink); background: var(--panel); }
+  .btn.ghost:hover { border-color: var(--accent); text-decoration: none; }
+
+  /* ── Feature cards ── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .card .ico { font-size: 1.4rem; margin-bottom: 10px; }
+  .card p { margin: 0; color: var(--ink-soft); font-size: 0.92rem; }
+
+  /* ── Playground ── */
+  .play { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+  .controls { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .ctl { margin-bottom: 18px; }
+  .ctl:last-child { margin-bottom: 0; }
+  .ctl label, .ctl .ctl-lab { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); margin-bottom: 7px; font-weight: 600; }
+  .ctl input[type=text], .ctl select {
+    width: 100%; padding: 9px 10px; background: var(--bg-soft); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 7px; font-family: var(--mono); font-size: 0.9rem;
+  }
+  .ctl input[type=range] { width: 100%; accent-color: var(--accent); }
+  .ctl .val { float: right; font-family: var(--mono); color: var(--bright); font-weight: 700; }
+  .seg { display: flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+  .seg button { flex: 1; padding: 9px; background: var(--bg-soft); color: var(--ink-soft); border: none; cursor: pointer; font-family: var(--sans); font-size: 0.88rem; }
+  .seg button.on { background: var(--accent); color: #1a0f0a; font-weight: 600; }
+  .render-stack { position: sticky; top: 20px; }
+  .notes { margin-top: 16px; font-size: 0.85rem; color: var(--ink-soft); }
+  .notes li { margin-bottom: 4px; }
+  .notes code { color: var(--bright); }
+
+  /* ── State gallery ── */
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 28px; font-family: var(--mono); font-size: 0.86rem; }
+  .legend span::before { content: "● "; }
+  .gal-group { margin-bottom: 34px; }
+  .gal-group h3 { font-family: var(--mono); color: var(--accent); font-size: 0.95rem; margin-bottom: 14px; }
+  .gal-row {
+    display: grid; grid-template-columns: 220px 1fr; gap: 18px; align-items: baseline;
+    padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-soft); margin-bottom: 8px;
+  }
+  .gal-render { font-family: var(--mono); font-size: 0.95rem; }
+  .gal-desc { color: var(--ink-soft); font-size: 0.88rem; }
+  .gal-desc b { color: var(--ink); font-weight: 600; }
+  .gal-desc code, .xform-in { font-family: var(--mono); color: var(--bright); background: var(--panel); padding: 1px 6px; border-radius: 4px; }
+  .arrow { color: var(--dim); margin: 0 8px; }
+
+  /* ── Install ── */
+  .install pre {
+    background: var(--term-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 20px; overflow-x: auto; font-family: var(--mono); font-size: 0.9rem; color: var(--ink); margin: 18px 0;
+  }
+  .install pre .c { color: var(--dim); }
+  .install pre .s { color: var(--green); }
+  .step-n { color: var(--accent); font-weight: 700; }
+
+  footer { padding: 40px 0 60px; border-top: 1px solid var(--border); color: var(--dim); font-size: 0.85rem; text-align: center; }
+
+  @media (max-width: 760px) {
+    .play { grid-template-columns: 1fr; }
+    .render-stack { position: static; }
+    .gal-row { grid-template-columns: 1fr; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="theme-switch" role="group" aria-label="Colour theme">
+  <button type="button" data-theme-pref="system" aria-pressed="true">System</button>
+  <button type="button" data-theme-pref="light" aria-pressed="false">Light</button>
+  <button type="button" data-theme-pref="dark" aria-pressed="false">Dark</button>
+</nav>
+
+<!-- ─────────────────────────  HERO  ───────────────────────── -->
+<header class="hero">
+  <div class="wrap">
+    <h1>The statusline that <span class="accent">never blocks</span> your prompt.</h1>
+    <p>A compact, status-aware statusline for Claude Code. Your directory, branch, model,
+       context budget, and rate-limit window — colour-coded, and rendered without ever
+       touching the network on the hot path.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="#install">Install it</a>
+      <a class="btn ghost" href="#playground">Try the playground</a>
+    </div>
+
+    <div class="term">
+      <div class="term-bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>claude — ~/Developer/ufonia-api</span></div>
+      <div class="term-body">
+        <div class="term-line"><span class="glyph">&gt;</span> <span class="muted">refactor the call scheduler to batch by region</span></div>
+        <div class="term-line muted">  Edited <span style="color:var(--blue)">scheduler.ts</span>, added region batching · ran tests · all green</div>
+        <div class="statusline" id="hero-line"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ─────────────────────────  FEATURES  ───────────────────────── -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Why you'll keep it</p>
+    <h2>Small line, careful engineering</h2>
+    <p class="lede">Every design decision protects the one thing that matters at a prompt: speed.</p>
+    <div class="cards">
+      <div class="card">
+        <div class="ico">⚡</div>
+        <h3>Instant prompt</h3>
+        <p>Zero network on the render path. A detached refresh keeps service status fresh in a 60-second cache — your prompt never waits on <code>curl</code>.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🚦</div>
+        <h3>Status-aware model</h3>
+        <p>The model name recolours with status.claude.com — but only for incidents that actually name <em>your</em> model. No false alarms from an unrelated outage.</p>
+      </div>
+      <div class="card">
+        <div class="ico">📉</div>
+        <h3>Budget meters</h3>
+        <p><code>cx:</code> tracks context remaining; <code>5h:</code> tracks your 5-hour window. Both ramp dim → bold → yellow → red as you near the edge.</p>
+      </div>
+      <div class="card">
+        <div class="ico">✂️</div>
+        <h3>Smart shortening</h3>
+        <p>Long branches truncate cleanly. Linear / Jira-style refs keep their ticket number and drop the prose. Worktrees replace the branch when you're in one.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🎨</div>
+        <h3>Theme-adaptive</h3>
+        <p>Pure ANSI styling — dim, bold, yellow, red. It inherits whatever palette your terminal theme paints, so it always looks native.</p>
+      </div>
+      <div class="card">
+        <div class="ico">📦</div>
+        <h3>One-file install</h3>
+        <p>Two scripts and a settings merge, captured in a single guide your coding agent runs for you. <a href="#install">Jump to install →</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────  PLAYGROUND  ───────────────────────── -->
+<section id="playground">
+  <div class="wrap">
+    <p class="eyebrow">Interactive</p>
+    <h2>Drive every component</h2>
+    <p class="lede">These controls run the <em>exact</em> logic ported from the script —
+       thresholds, hide rules, and shortening included. Push the sliders and watch it react.</p>
+
+    <div class="play">
+      <div class="controls">
+        <div class="ctl">
+          <label for="c-dir">Directory</label>
+          <input type="text" id="c-dir" value="ufonia-api">
+        </div>
+        <div class="ctl">
+          <span class="ctl-lab" id="c-mode-lab">Ref source</span>
+          <div class="seg" id="c-mode" role="group" aria-labelledby="c-mode-lab">
+            <button data-mode="branch" class="on">branch</button>
+            <button data-mode="worktree">worktree</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <label for="c-ref" id="c-ref-label">Branch name</label>
+          <input type="text" id="c-ref" value="sighmin/ENG-1234-batch-the-scheduler">
+        </div>
+        <div class="ctl">
+          <label for="c-model">Model</label>
+          <select id="c-model">
+            <option>Claude Opus 4.8</option>
+            <option>Claude Sonnet 4.6</option>
+            <option>Claude Haiku 4.5</option>
+            <option>Claude Opus 4.8 (1M context)</option>
+            <option>Claude Fable 5</option>
+          </select>
+        </div>
+        <div class="ctl">
+          <label for="c-status">Service status</label>
+          <select id="c-status">
+            <option value="operational">operational</option>
+            <option value="degraded_performance">degraded_performance</option>
+            <option value="partial_outage">partial_outage</option>
+            <option value="under_maintenance">under_maintenance</option>
+            <option value="major_outage">major_outage</option>
+          </select>
+        </div>
+        <div class="ctl">
+          <label for="c-cx">Context remaining <span class="val" id="c-cx-val">84%</span></label>
+          <input type="range" id="c-cx" min="0" max="100" value="84">
+        </div>
+        <div class="ctl">
+          <label for="c-5h">5-hour window used <span class="val" id="c-5h-val">62%</span></label>
+          <input type="range" id="c-5h" min="0" max="100" value="62">
+        </div>
+      </div>
+
+      <div class="render-stack">
+        <div class="term">
+          <div class="term-bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>live render</span></div>
+          <div class="term-body">
+            <div class="statusline" id="play-line" style="margin-top:0;padding-top:0;border-top:none"></div>
+          </div>
+        </div>
+        <ul class="notes" id="play-notes"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────  STATE GALLERY  ───────────────────────── -->
+<section id="gallery">
+  <div class="wrap">
+    <p class="eyebrow">Reference</p>
+    <h2>Every component, every state</h2>
+    <p class="lede">The full vocabulary of the line. Generated by the same engine the playground uses,
+       so what you see here is exactly what your terminal will show.</p>
+
+    <div class="legend">
+      <span style="color:var(--dim)">dim — nominal</span>
+      <span style="color:var(--bright)">bold — heads-up</span>
+      <span style="color:var(--yellow)">yellow — warning</span>
+      <span style="color:var(--red)">red — critical</span>
+    </div>
+
+    <div id="gallery-body"></div>
+  </div>
+</section>
+
+<!-- ─────────────────────────  INSTALL  ───────────────────────── -->
+<section id="install" class="install">
+  <div class="wrap">
+    <p class="eyebrow">Get it</p>
+    <h2>Hand it to your agent</h2>
+    <p class="lede">The whole setup lives in one Markdown file — two scripts and a settings merge.
+       Drop it next to your agent and ask. It does the rest.</p>
+
+    <p><span class="step-n">1.</span> Fetch the guide into your home directory:</p>
+    <pre><span class="c"># grabs the self-contained how-to (scripts embedded inline)</span>
+curl -fsSL https://raw.githubusercontent.com/sighmin/dotfiles/main/claude/statusline-setup.md \
+  -o ~/statusline-setup.md</pre>
+
+    <p><span class="step-n">2.</span> Open Claude Code in your home directory and say:</p>
+    <pre><span class="s">"Read statusline-setup.md and set up this statusline."</span></pre>
+
+    <p>Your agent writes <code>~/.claude/statusline-command.sh</code> and
+       <code>~/.claude/status-refresh.sh</code>, merges the <code>statusLine</code> block into your
+       settings (non-destructively), and verifies the render. It shows up on your next prompt.</p>
+
+    <p style="margin-top:24px">
+      Prefer to read first? See the
+      <a href="https://github.com/sighmin/dotfiles/blob/main/claude/statusline-setup.md">setup guide</a>
+      and the <a href="https://github.com/sighmin/dotfiles/tree/main/claude">scripts</a> on GitHub.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Built by <a href="https://github.com/sighmin">svd</a> · runs entirely on
+    <a href="https://status.claude.com">status.claude.com</a>'s public summary · no telemetry, no build step, one file.
+  </div>
+</footer>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   ENGINE — ported verbatim from statusline-command.sh.
+   This is the single source of truth: both the playground and the
+   gallery render through these functions, so the page cannot drift
+   from the script's behaviour.
+   ════════════════════════════════════════════════════════════════════ */
+
+// basename "$cwd"
+function basename(cwd) {
+  if (!cwd) return "";
+  const parts = cwd.split("/").filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : cwd;
+}
+
+// shorten_ref(): >25 chars → cut after first digit-run (Linear style),
+// else end-truncate at 25 with an ellipsis.
+function shortenRef(name) {
+  if (!name) return "";
+  if (name.length <= 25) return name;
+  const m = name.match(/^([^0-9]*[0-9]+)/);
+  if (m) return m[1].replace(/[-_/.]$/, "");
+  return name.slice(0, 25) + "…";
+}
+
+// model name transform: strip "Claude ", drop " context"/" Context",
+// remove the space between a letter and a digit.
+function modelName(raw) {
+  let m = raw || "";
+  m = m.replace(/^Claude /, "");
+  m = m.split(" Context").join("");
+  m = m.split(" context").join("");
+  m = m.replace(/([A-Za-z]) ([0-9])/g, "$1$2");
+  return m;
+}
+
+// service status → model token style
+function modelStyle(status) {
+  switch (status) {
+    case "degraded_performance":              return ["yellow"]; // yellow, not bold
+    case "partial_outage":
+    case "under_maintenance":                 return ["bold", "yellow"];
+    case "major_outage":                      return ["bold", "red"];
+    default:                                  return ["dim"]; // operational / unknown / ""
+  }
+}
+
+// printf "%.0f" rounds to nearest integer (ties differ only at .5; negligible here)
+function round(x) { return Math.round(Number(x)); }
+
+// fmt_cx(): context remaining — lower is worse.
+function fmtCx(pct) {
+  if (pct === "" || pct == null) return null;
+  const n = round(pct);
+  let classes;
+  if      (n >= 90) classes = ["dim"];
+  else if (n >= 80) classes = ["bold"];
+  else if (n >= 75) classes = ["bold", "yellow"];
+  else              classes = ["bold", "red"];
+  return { text: "cx:" + n + "%", classes };
+}
+
+// fmt_5h(): 5-hour window used — higher is worse, hidden below 25%.
+function fmt5h(pct) {
+  if (pct === "" || pct == null) return null;
+  const n = round(pct);
+  if (n < 25) return null;
+  let classes;
+  if      (n <= 50) classes = ["dim"];
+  else if (n <= 75) classes = ["bold"];
+  else if (n <= 90) classes = ["bold", "yellow"];
+  else              classes = ["bold", "red"];
+  return { text: "5h:" + n + "%", classes };
+}
+
+// Assemble the token list exactly as the script does.
+function buildTokens(s) {
+  const tokens = [];
+  const leaf = basename(s.dir);
+  if (leaf) tokens.push({ text: leaf, classes: ["dim"] });
+
+  const worktree = s.mode === "worktree" ? (s.ref || "") : "";
+  const branch   = s.mode === "branch"   ? (s.ref || "") : "";
+  const shortWt  = shortenRef(worktree);
+  const shortBr  = shortenRef(branch);
+
+  if (shortWt && shortWt !== leaf) {
+    tokens.push({ text: "wt:" + shortWt, classes: ["dim"] });
+  } else if (!worktree && shortBr) {
+    tokens.push({ text: shortBr, classes: ["dim"] });
+  }
+
+  const model = modelName(s.model);
+  if (model) tokens.push({ text: model, classes: modelStyle(s.status) });
+
+  const cx = fmtCx(s.cx);
+  if (cx) tokens.push(cx);
+  const fh = fmt5h(s.fiveH);
+  if (fh) tokens.push(fh);
+
+  return tokens;
+}
+
+/* ── rendering helpers ── */
+function esc(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function tokenSpan(t) { return '<span class="tok ' + t.classes.join(" ") + '">' + esc(t.text) + "</span>"; }
+function renderLine(tokens) {
+  const sep = '<span class="tok sep"> · </span>';
+  return tokens.map(tokenSpan).join(sep);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   HERO
+   ════════════════════════════════════════════════════════════════════ */
+document.getElementById("hero-line").innerHTML = renderLine(buildTokens({
+  dir: "ufonia-api", mode: "branch", ref: "sighmin/ENG-1204-region-batching",
+  model: "Claude Opus 4.8", status: "operational", cx: 84, fiveH: 62,
+}));
+
+/* ════════════════════════════════════════════════════════════════════
+   PLAYGROUND
+   ════════════════════════════════════════════════════════════════════ */
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const state = { dir: "ufonia-api", mode: "branch", ref: "sighmin/ENG-1234-batch-the-scheduler",
+                  model: "Claude Opus 4.8", status: "operational", cx: 84, fiveH: 62 };
+
+  function renderNotes() {
+    const out = [];
+    const leaf = basename(state.dir);
+    const shortWt = state.mode === "worktree" ? shortenRef(state.ref) : "";
+    const shortBr = state.mode === "branch" ? shortenRef(state.ref) : "";
+
+    if (state.mode === "worktree") {
+      if (!state.ref) out.push("No worktree name — token hidden.");
+      else if (shortWt === leaf) out.push("<code>wt:</code> dropped — shortened worktree equals the directory.");
+      else if (shortWt !== state.ref) out.push("Worktree shortened: <code>" + esc(state.ref) + "</code> → <code>" + esc(shortWt) + "</code>");
+    } else {
+      if (!state.ref) out.push("No branch — token hidden.");
+      else if (shortBr !== state.ref) out.push("Branch shortened: <code>" + esc(state.ref) + "</code> → <code>" + esc(shortBr) + "</code>");
+    }
+    if (modelName(state.model) !== state.model)
+      out.push("Model name: <code>" + esc(state.model) + "</code> → <code>" + esc(modelName(state.model)) + "</code>");
+    if (state.status !== "operational")
+      out.push("Model token recoloured for <code>" + state.status + "</code>.");
+    if (round(state.fiveH) < 25) out.push("<code>5h:</code> hidden — below the 25% display floor.");
+
+    $("play-notes").innerHTML = out.map((n) => "<li>" + n + "</li>").join("");
+  }
+
+  function render() {
+    $("play-line").innerHTML = renderLine(buildTokens(state));
+    $("c-cx-val").textContent = round(state.cx) + "%";
+    $("c-5h-val").textContent = round(state.fiveH) + "%";
+    renderNotes();
+  }
+
+  $("c-dir").addEventListener("input", (e) => { state.dir = e.target.value; render(); });
+  $("c-ref").addEventListener("input", (e) => { state.ref = e.target.value; render(); });
+  $("c-model").addEventListener("change", (e) => { state.model = e.target.value; render(); });
+  $("c-status").addEventListener("change", (e) => { state.status = e.target.value; render(); });
+  $("c-cx").addEventListener("input", (e) => { state.cx = +e.target.value; render(); });
+  $("c-5h").addEventListener("input", (e) => { state.fiveH = +e.target.value; render(); });
+  $("c-mode").querySelectorAll("button").forEach((b) => {
+    b.addEventListener("click", () => {
+      state.mode = b.dataset.mode;
+      $("c-mode").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+      $("c-ref-label").textContent = state.mode === "worktree" ? "Worktree name" : "Branch name";
+      render();
+    });
+  });
+
+  render();
+})();
+
+/* ════════════════════════════════════════════════════════════════════
+   STATE GALLERY — built from the engine
+   ════════════════════════════════════════════════════════════════════ */
+(function () {
+  function row(renderHTML, descHTML) {
+    return '<div class="gal-row"><div class="gal-render">' + renderHTML +
+           '</div><div class="gal-desc">' + descHTML + "</div></div>";
+  }
+  function modelTok(status) { return tokenSpan({ text: "Opus4.8", classes: modelStyle(status) }); }
+  function tok(t) { return t ? tokenSpan(t) : '<span class="tok dim">(hidden)</span>'; }
+
+  const groups = [];
+
+  // Model / service status
+  groups.push({ title: "Model token — tracks status.claude.com", rows: [
+    row(modelTok("operational"),         "<b>Operational</b> (also unknown) <span class='arrow'>←</span> dim, the resting state"),
+    row(modelTok("degraded_performance"),"<b>Degraded performance</b> <span class='arrow'>←</span> a <code>minor</code> incident on your model"),
+    row(modelTok("partial_outage"),      "<b>Partial outage</b> <span class='arrow'>←</span> a <code>major</code> incident — bold yellow"),
+    row(modelTok("under_maintenance"),   "<b>Under maintenance</b> <span class='arrow'>←</span> same bold yellow"),
+    row(modelTok("major_outage"),        "<b>Major outage</b> <span class='arrow'>←</span> a <code>critical</code> incident — bold red"),
+  ]});
+
+  // cx
+  groups.push({ title: "cx: — context remaining (lower is worse)", rows: [
+    row(tok(fmtCx(92)), "<b>≥ 90%</b> <span class='arrow'>←</span> dim, plenty of room"),
+    row(tok(fmtCx(85)), "<b>80–89%</b> <span class='arrow'>←</span> bold, keep an eye on it"),
+    row(tok(fmtCx(77)), "<b>75–79%</b> <span class='arrow'>←</span> yellow, getting tight"),
+    row(tok(fmtCx(68)), "<b>&lt; 75%</b> <span class='arrow'>←</span> red, wrap up or compact"),
+  ]});
+
+  // 5h
+  groups.push({ title: "5h: — 5-hour window used (higher is worse)", rows: [
+    row(tok(fmt5h(20)), "<b>&lt; 25%</b> <span class='arrow'>←</span> hidden entirely, no noise when fresh"),
+    row(tok(fmt5h(40)), "<b>≤ 50%</b> <span class='arrow'>←</span> dim"),
+    row(tok(fmt5h(65)), "<b>51–75%</b> <span class='arrow'>←</span> bold"),
+    row(tok(fmt5h(85)), "<b>76–90%</b> <span class='arrow'>←</span> yellow"),
+    row(tok(fmt5h(96)), "<b>&gt; 90%</b> <span class='arrow'>←</span> red, nearly out of window"),
+  ]});
+
+  // Refs
+  const refIn = (s) => '<span class="xform-in">' + esc(s) + "</span>";
+  function refRow(name, mode) {
+    const short = shortenRef(name);
+    const cls = mode === "wt" ? "wt:" + short : short;
+    return tokenSpan({ text: cls, classes: ["dim"] });
+  }
+  groups.push({ title: "Branch & worktree — shortened when long", rows: [
+    row(refRow("main", "br"), "Short branch <span class='arrow'>←</span> shown verbatim (≤ 25 chars)"),
+    row(refRow("sighmin/ENG-1234-batch-the-scheduler", "br"),
+        "Linear-style <span class='arrow'>←</span> " + refIn("sighmin/ENG-1234-batch-the-scheduler") + " keeps the ticket, drops the prose"),
+    row(refRow("feature/redesign-the-whole-onboarding-flow", "br"),
+        "No digits <span class='arrow'>←</span> " + refIn("feature/redesign-the-whole-onboarding-flow") + " end-truncates with …"),
+    row(tokenSpan({ text: "worktree", classes: ["dim"] }), "In a worktree, <code>wt:name</code> replaces the branch"),
+    row('<span class="tok dim">agent-fix</span> <span class="tok dim">(no wt:)</span>',
+        "When the worktree equals the directory, <code>wt:</code> is dropped as redundant"),
+  ]});
+
+  // Model name transform
+  function xrow(input) {
+    return row(refIn(input) + '<span class="arrow">→</span>' + tokenSpan({ text: modelName(input), classes: ["dim"] }), "");
+  }
+  groups.push({ title: "Model name — normalised for width", rows: [
+    xrow("Claude Opus 4.8"),
+    xrow("Claude Sonnet 4.6"),
+    xrow("Claude Haiku 4.5"),
+    xrow("Claude Opus 4.8 (1M context)"),
+    xrow("Claude Fable 5"),
+  ]});
+
+  document.getElementById("gallery-body").innerHTML = groups.map((g) =>
+    '<div class="gal-group"><h3>' + g.title + "</h3>" + g.rows.join("") + "</div>"
+  ).join("");
+})();
+
+/* ════════════════════════════════════════════════════════════════════
+   THEME SWITCHER — system / dark / light  (persisted in localStorage)
+   ════════════════════════════════════════════════════════════════════ */
+(function () {
+  const KEY = "statusline-demo-theme";
+  const root = document.documentElement;
+  const mq = matchMedia("(prefers-color-scheme: dark)");
+  const buttons = [...document.querySelectorAll(".theme-switch button")];
+  let pref = "system";
+  try { pref = localStorage.getItem(KEY) || "system"; } catch (e) {}
+
+  const resolved = () => (pref === "system" ? (mq.matches ? "dark" : "light") : pref);
+  function apply() {
+    root.setAttribute("data-theme", resolved());
+    buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themePref === pref)));
+  }
+  buttons.forEach((b) => b.addEventListener("click", () => {
+    pref = b.dataset.themePref;
+    try { localStorage.setItem(KEY, pref); } catch (e) {}
+    apply();
+  }));
+  mq.addEventListener("change", () => { if (pref === "system") apply(); });
+  apply();
+})();
+</script>
+</body>
+</html>

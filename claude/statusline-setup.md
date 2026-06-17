@@ -1,3 +1,31 @@
+# How to install this Claude Code statusline
+
+Hand this file to your Claude Code agent and say: **"set up this statusline."**
+It contains everything the agent needs — two scripts and one settings change.
+
+This guide shows you how to install the statusline demoed in
+[`statusline-demo.html`](./statusline-demo.html): a compact line of
+`dir · branch · model · cx:NN% · 5h:NN%` whose model colour tracks
+status.claude.com and whose meters ramp dim → bold → yellow → red. It never
+touches the network on the render path, so the prompt stays instant.
+
+## Before you begin
+
+Confirm the four required tools are on `PATH`. Run:
+
+```sh
+for c in bash jq git curl; do command -v "$c" >/dev/null 2>&1 && echo "ok: $c" || echo "MISSING: $c"; done
+```
+
+If any report `MISSING`, install it before continuing (`brew install jq`, etc.).
+The `·` separator and `…` truncation glyph render best in a Nerd/Unicode font;
+with a plain font they degrade to a box but the statusline still works.
+
+## Step 1: Write `~/.claude/statusline-command.sh`
+
+Create the file `~/.claude/statusline-command.sh` with exactly this content:
+
+```bash
 #!/usr/bin/env bash
 input=$(cat)
 
@@ -177,3 +205,123 @@ for i in "${!tokens[@]}"; do
 done
 
 printf "%s" "$line"
+```
+
+## Step 2: Write `~/.claude/status-refresh.sh`
+
+Create the file `~/.claude/status-refresh.sh` with exactly this content:
+
+```bash
+#!/usr/bin/env bash
+# Fetches status.claude.com and writes a compact JSON cache: the worst raw
+# component status (across the components that affect a Claude Code session)
+# plus the list of open incidents touching those components. The statusline
+# decides per-session whether an incident is relevant — incident titles name
+# the affected model ("Elevated errors on Claude Haiku 4.5") while component
+# statuses don't, so the model filter has to happen on the incident list.
+# Designed to be invoked detached from the statusline so the prompt never
+# blocks on the network. On any failure (offline, timeout, parse error) we
+# still write to the cache so the staleness check doesn't keep spawning us.
+
+set -u
+
+cache_file="${CLAUDE_STATUS_CACHE:-$HOME/.claude/cache/claude-status}"
+mkdir -p "$(dirname "$cache_file")"
+
+# Components we care about. "Claude Code" is the app, the API component is
+# the upstream it depends on. Incidents with no component list are kept too —
+# better a false yellow than a silently missed outage.
+payload=$(curl -fsS --max-time 4 https://status.claude.com/api/v2/summary.json 2>/dev/null \
+  | jq -c '
+      def relevant: .name == "Claude Code"
+                 or .name == "Claude API (api.anthropic.com)";
+      {
+        component_status:
+          ([ .components[] | select(relevant) | .status ]
+           | if   any(. == "major_outage")         then "major_outage"
+             elif any(. == "partial_outage")       then "partial_outage"
+             elif any(. == "under_maintenance")    then "under_maintenance"
+             elif any(. == "degraded_performance") then "degraded_performance"
+             elif length > 0                       then "operational"
+             else "unknown" end),
+        incidents:
+          [ .incidents[]
+            | select((.components | length) == 0 or any(.components[]; relevant))
+            | {name, impact} ]
+      }
+    ' 2>/dev/null)
+
+[ -z "$payload" ] && payload='{"component_status":"unknown","incidents":[]}'
+printf "%s\n" "$payload" > "$cache_file"
+```
+
+## Step 3: Make both scripts executable
+
+```sh
+chmod +x ~/.claude/statusline-command.sh ~/.claude/status-refresh.sh
+```
+
+## Step 4: Wire the statusLine into settings
+
+Merge the `statusLine` block into `~/.claude/settings.json` without disturbing
+any existing settings. This creates the file if it is absent and overwrites
+only the `statusLine` key:
+
+```sh
+mkdir -p ~/.claude
+[ -f ~/.claude/settings.json ] || echo '{}' > ~/.claude/settings.json
+tmp=$(mktemp)
+jq '.statusLine = {"type": "command", "command": "bash ~/.claude/statusline-command.sh"}' \
+  ~/.claude/settings.json > "$tmp" && mv "$tmp" ~/.claude/settings.json
+```
+
+## Step 5: Verify
+
+Render the statusline directly by piping it a sample of the JSON Claude Code
+sends on stdin:
+
+```sh
+echo '{"workspace":{"current_dir":"/tmp/proj","git_worktree":""},"model":{"display_name":"Claude Opus 4.8"},"context_window":{"remaining_percentage":68},"rate_limits":{"five_hour":{"used_percentage":96}}}' \
+  | bash ~/.claude/statusline-command.sh | cat -v
+```
+
+Expect a line ending `proj · Opus4.8 · cx:68% · 5h:96%`, with `cat -v` showing
+the ANSI escapes (`^[[1;31m`) that colour `cx`/`5h` red at those levels. The
+statusline appears in Claude Code from your next prompt onward.
+
+Each token means:
+
+- **`proj`** — current directory (leaf only).
+- **`branch`** or **`wt:name`** — git branch, or worktree name when you're in one.
+- **`Opus4.8`** — active model; colour follows status.claude.com.
+- **`cx:NN%`** — context window remaining (red as it runs low).
+- **`5h:NN%`** — 5-hour usage window (hidden below 25%; red as it fills).
+
+For every component in every colour state, open
+[`statusline-demo.html`](./statusline-demo.html).
+
+## Adapting this
+
+- **If you keep your dotfiles in a repo:** write the two scripts into your repo
+  instead, symlink them to `~/.claude/`, and point the command at the symlink —
+  `bash ~/.claude/statusline-command.sh` works either way.
+- **If you store the status cache elsewhere:** export `CLAUDE_STATUS_CACHE` to
+  an absolute path; both scripts honour it.
+
+## Troubleshooting
+
+- **No colours at all** — your terminal or Claude Code theme may strip ANSI.
+  Confirm escapes are emitted with the `cat -v` check in Step 5.
+- **`jq: command not found`** — install `jq` (`brew install jq`); the statusline
+  cannot parse stdin without it.
+- **Separator shows as `▯`** — the font lacks the `·`/`…` glyphs. Switch to a
+  Nerd or Unicode-complete font; behaviour is unaffected.
+- **Model token never changes colour** — `curl` to status.claude.com is blocked,
+  or the cache is empty. The line still works; the model token just stays dim.
+  Run `bash ~/.claude/status-refresh.sh && cat ~/.claude/cache/claude-status` to
+  check the fetch.
+
+## See also
+
+- [`statusline-demo.html`](./statusline-demo.html) — live demo of every
+  component state, and the reasoning behind the design.
