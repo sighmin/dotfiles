@@ -35,4 +35,38 @@
       "ctrl-a shift-l": "vim::ResizePaneRight",
     },
   },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-shift-g": "git_panel::ToggleFocus",
+    },
+  },
+  {
+    "context": "Workspace",
+    "unbind": {
+      "ctrl-shift-g": "git_panel::ToggleFocus",
+    },
+  },
+  {
+    "context": "Editor && vim_mode == normal",
+    "bindings": {
+      // Writing-zen (Snacks.zen / Goyo equivalent): centered narrow column,
+      // docks + tab bar + line numbers + indent guides hidden.
+      // Every action is a true toggle, so `space w` again restores everything.
+      // Soft wrap is left alone here (it's on globally) and toggled by `space n`.
+      "space w": [
+        "action::Sequence",
+        [
+          "workspace::ToggleAllDocks",
+          "multi_workspace::ToggleWorkspaceSidebar",
+          "editor::ToggleTabBar",
+          "editor::ToggleLineNumbers",
+          "editor::ToggleIndentGuides",
+          "workspace::ToggleCenteredLayout",
+        ],
+      ],
+      // Toggle soft wrap (on globally via settings; flip off/on when needed).
+      "space n": "editor::ToggleSoftWrap",
+    },
+  },
 ]

@@ -7,6 +7,10 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "soft_wrap": "editor_width",
+  "tab_bar": {
+    "show": true
+  },
   "tabs": {
     "git_status": false,
     "file_icons": false,
@@ -39,10 +43,16 @@
     "dark": "Zed (Default)",
   },
   "agent_servers": {
+    "opencode": {
+      "type": "registry"
+    },
     "codex-acp": {
       "type": "registry",
     },
     "claude-acp": {
+      "default_config_options": {
+        "mode": "plan"
+      },
       "favorite_config_option_values": {
         "effort": ["max"],
       },
@@ -84,4 +94,8 @@
     // "**/.classpath",
     // "**/.settings"
   ],
+  "centered_layout": {
+    "left_padding": 0.28,
+    "right_padding": 0.28,
+  },
 }
