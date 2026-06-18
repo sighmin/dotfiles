@@ -292,7 +292,7 @@
         </div>
         <div class="ctl">
           <label for="c-ref" id="c-ref-label">Branch name</label>
-          <input type="text" id="c-ref" value="sighmin/ENG-1234-batch-the-scheduler">
+          <input type="text" id="c-ref" value="svd/PRD-1234-batch-the-scheduler">
         </div>
         <div class="ctl">
           <label for="c-model">Model</label>
@@ -506,7 +506,7 @@ function renderLine(tokens) {
    HERO
    ════════════════════════════════════════════════════════════════════ */
 document.getElementById("hero-line").innerHTML = renderLine(buildTokens({
-  dir: "ufonia-api", mode: "branch", ref: "sighmin/ENG-1204-region-batching",
+  dir: "ufonia-api", mode: "branch", ref: "svd/PRD-1204-region-batching",
   model: "Claude Opus 4.8", status: "operational", cx: 84, fiveH: 62,
 }));
 
@@ -515,7 +515,7 @@ document.getElementById("hero-line").innerHTML = renderLine(buildTokens({
    ════════════════════════════════════════════════════════════════════ */
 (function () {
   const $ = (id) => document.getElementById(id);
-  const state = { dir: "ufonia-api", mode: "branch", ref: "sighmin/ENG-1234-batch-the-scheduler",
+  const state = { dir: "ufonia-api", mode: "branch", ref: "svd/PRD-1234-batch-the-scheduler",
                   model: "Claude Opus 4.8", status: "operational", cx: 84, fiveH: 62 };
 
   function renderNotes() {
@@ -614,8 +614,8 @@ document.getElementById("hero-line").innerHTML = renderLine(buildTokens({
   }
   groups.push({ title: "Branch & worktree — shortened when long", rows: [
     row(refRow("main", "br"), "Short branch <span class='arrow'>←</span> shown verbatim (≤ 25 chars)"),
-    row(refRow("sighmin/ENG-1234-batch-the-scheduler", "br"),
-        "Linear-style <span class='arrow'>←</span> " + refIn("sighmin/ENG-1234-batch-the-scheduler") + " keeps the ticket, drops the prose"),
+    row(refRow("svd/PRD-1234-batch-the-scheduler", "br"),
+        "Linear-style <span class='arrow'>←</span> " + refIn("svd/PRD-1234-batch-the-scheduler") + " keeps the ticket, drops the prose"),
     row(refRow("feature/redesign-the-whole-onboarding-flow", "br"),
         "No digits <span class='arrow'>←</span> " + refIn("feature/redesign-the-whole-onboarding-flow") + " end-truncates with …"),
     row(tokenSpan({ text: "worktree", classes: ["dim"] }), "In a worktree, <code>wt:name</code> replaces the branch"),
