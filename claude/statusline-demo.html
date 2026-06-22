@@ -181,11 +181,27 @@
 
   /* ── Install ── */
   .install pre {
+    position: relative;
     background: var(--term-bg); border: 1px solid var(--border); border-radius: 10px;
     padding: 18px 20px; overflow-x: auto; font-family: var(--mono); font-size: 0.9rem; color: var(--ink); margin: 18px 0;
   }
   .install pre .c { color: var(--dim); }
   .install pre .s { color: var(--green); }
+
+  /* ── Click-to-copy ── */
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px; z-index: 2;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--panel); color: var(--ink-soft);
+    font-family: var(--sans); font-size: 0.74rem; font-weight: 600; line-height: 1;
+    opacity: 0; transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .install pre:hover .copy-btn,
+  .copy-btn:focus-visible { opacity: 1; }
+  .copy-btn:hover { color: var(--ink); border-color: var(--accent); }
+  .copy-btn.copied { color: var(--green); border-color: var(--green); opacity: 1; }
+  @media (hover: none) { .copy-btn { opacity: 1; } }
   .step-n { color: var(--accent); font-weight: 700; }
 
   footer { padding: 40px 0 60px; border-top: 1px solid var(--border); color: var(--dim); font-size: 0.85rem; text-align: center; }
@@ -663,6 +679,56 @@ document.getElementById("hero-line").innerHTML = renderLine(buildTokens({
   }));
   mq.addEventListener("change", () => { if (pref === "system") apply(); });
   apply();
+})();
+
+/* ════════════════════════════════════════════════════════════════════
+   CLICK-TO-COPY — drops a button on every install code block
+   ════════════════════════════════════════════════════════════════════ */
+(function () {
+  async function copy(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (e) {
+      // Fallback for non-secure contexts / older browsers.
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch (e2) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    }
+  }
+
+  document.querySelectorAll(".install pre").forEach((pre) => {
+    // Snapshot the code text before the button becomes a child of <pre>.
+    const text = pre.innerText.trim();
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "copy-btn";
+    btn.textContent = "Copy";
+    btn.setAttribute("aria-label", "Copy to clipboard");
+
+    let resetTimer;
+    btn.addEventListener("click", async () => {
+      const ok = await copy(text);
+      btn.textContent = ok ? "Copied!" : "Press ⌘C";
+      btn.classList.toggle("copied", ok);
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1600);
+    });
+
+    pre.appendChild(btn);
+  });
 })();
 </script>
 </body>
