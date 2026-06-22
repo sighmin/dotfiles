@@ -91,7 +91,6 @@
 
   /* ── Terminal rendering of the statusline ── */
   .term {
-    position: relative;
     background: var(--term-bg);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -199,7 +198,6 @@
     opacity: 0; transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
   .install pre:hover .copy-btn,
-  .term:hover .copy-btn,
   .copy-btn:focus-visible { opacity: 1; }
   .copy-btn:hover { color: var(--ink); border-color: var(--accent); }
   .copy-btn.copied { color: var(--green); border-color: var(--green); opacity: 1; }
@@ -735,13 +733,6 @@ document.getElementById("hero-line").innerHTML = renderLine(buildTokens({
   document.querySelectorAll(".install pre").forEach((pre) => {
     const text = pre.innerText.trim();
     attachCopy(pre, () => text);
-  });
-
-  // Terminal renders — copy the statusline itself (read live, so the
-  // playground's current state is what lands on the clipboard).
-  document.querySelectorAll(".term").forEach((term) => {
-    const line = term.querySelector(".statusline");
-    if (line) attachCopy(term, () => line.innerText.trim());
   });
 })();
 </script>
